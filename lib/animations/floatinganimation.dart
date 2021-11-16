@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AnimatedImage extends StatefulWidget {
-  const AnimatedImage({Key? key}) : super(key: key);
+  final String img;
+  final double size;
+  const AnimatedImage({Key? key, required this.img, required this.size})
+      : super(key: key);
 
   @override
   _AnimatedImageState createState() => _AnimatedImageState();
@@ -30,7 +33,8 @@ class _AnimatedImageState extends State<AnimatedImage>
           children: [
             SizedBox(
                 child: Image.asset(
-              'lib/animations/sami.png',
+              widget.img,
+              scale: widget.size,
             ))
           ],
         ));

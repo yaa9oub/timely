@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/calendar.dart';
 import 'package:timely/selection.dart';
 import 'package:timely/themes/themes.dart';
+import 'package:dynamic_themes/dynamic_themes.dart';
 
 void main() {
   runApp(MyApp());
@@ -57,9 +58,15 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-        theme: lightThemeData,
-        debugShowCheckedModeBanner: false,
-        home: nextWidget);
+    return DynamicTheme(
+        themeCollection: themeCollection, // optional, default id is 0
+        builder: (context, theme) {
+          return MaterialApp(
+            title: 'dynamic_themes example',
+            theme: theme,
+            debugShowCheckedModeBanner: false,
+            home: nextWidget,
+          );
+        });
   }
 }

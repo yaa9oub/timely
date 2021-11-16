@@ -1,7 +1,10 @@
+import 'package:dynamic_themes/dynamic_themes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/calendar.dart';
+import 'package:timely/selection.dart';
+import 'package:timely/themes/themes.dart';
 import 'package:timely/widgets/text.dart';
 
 class ColorEditor extends StatefulWidget {
@@ -20,6 +23,7 @@ class ColorEditor extends StatefulWidget {
 
 class _ColorEditorState extends State<ColorEditor> {
   Color tpcolor = Colors.red, tdcolor = Colors.blue, ccolor = Colors.green;
+  late IconData darkModeIcon;
 
   @override
   void initState() {
@@ -47,6 +51,13 @@ class _ColorEditorState extends State<ColorEditor> {
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
+
+    //if (Theme.of(context).backgroundColor == Colors.white) {
+    if (DynamicTheme.of(context)!.themeId == AppThemes.Light.toInt()) {
+      darkModeIcon = Icons.light_mode;
+    } else {
+      darkModeIcon = Icons.dark_mode;
+    }
     return WillPopScope(
       onWillPop: () async => false,
       child: Scaffold(
@@ -60,18 +71,18 @@ class _ColorEditorState extends State<ColorEditor> {
                         majorLbl: widget.majorLbl,
                       )));
             },
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back,
-              color: Colors.black,
+              color: Theme.of(context).primaryColor,
             ),
           ),
           elevation: 0,
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).backgroundColor,
         ),
         body: Container(
           width: size.width,
           height: size.height,
-          color: Colors.white,
+          color: Theme.of(context).backgroundColor,
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -79,11 +90,11 @@ class _ColorEditorState extends State<ColorEditor> {
               children: [
                 SizedBox(
                   width: size.width * 0.8,
-                  child: const MyText(
-                      mytext: "Customize your colors",
+                  child: MyText(
+                      mytext: "Customize your app",
                       textSize: 50.0,
                       myweight: FontWeight.w600,
-                      mycolor: Colors.black),
+                      mycolor: Theme.of(context).primaryColor),
                 ),
                 SizedBox(
                   height: size.height * 0.1,
@@ -93,17 +104,23 @@ class _ColorEditorState extends State<ColorEditor> {
                   decoration: BoxDecoration(
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
+                        color: DynamicTheme.of(context)!.themeId ==
+                                AppThemes.Light.toInt()
+                            ? Colors.black12
+                            : const Color(0xff2d333d),
                         spreadRadius: 5,
-                        blurRadius: 7,
+                        blurRadius: 5,
                         offset: const Offset(0, 3),
                       )
                     ],
                     borderRadius: BorderRadius.circular(10.0),
-                    color: Colors.white,
+                    color: DynamicTheme.of(context)!.themeId ==
+                            AppThemes.Light.toInt()
+                        ? Theme.of(context).backgroundColor
+                        : const Color(0xff2d333d),
                   ),
                   width: size.width * 0.8,
-                  height: size.height * 0.3,
+                  //height: size.height * 0.5,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -111,7 +128,7 @@ class _ColorEditorState extends State<ColorEditor> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           MyText(
-                              mytext: "TP Color",
+                              mytext: "TP color",
                               textSize: 20.0,
                               myweight: FontWeight.bold,
                               mycolor: Theme.of(context).primaryColor),
@@ -130,11 +147,14 @@ class _ColorEditorState extends State<ColorEditor> {
                           ),
                         ],
                       ),
+                      const SizedBox(
+                        height: 5.0,
+                      ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           MyText(
-                              mytext: "TD Color",
+                              mytext: "TD color",
                               textSize: 20.0,
                               myweight: FontWeight.bold,
                               mycolor: Theme.of(context).primaryColor),
@@ -153,11 +173,14 @@ class _ColorEditorState extends State<ColorEditor> {
                           ),
                         ],
                       ),
+                      const SizedBox(
+                        height: 5.0,
+                      ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           MyText(
-                              mytext: "Cours Color",
+                              mytext: "Courses color",
                               textSize: 20.0,
                               myweight: FontWeight.bold,
                               mycolor: Theme.of(context).primaryColor),
@@ -173,6 +196,50 @@ class _ColorEditorState extends State<ColorEditor> {
                                 borderRadius: BorderRadius.circular(10.0),
                               ),
                             ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          MyText(
+                              mytext: "Theme mode",
+                              textSize: 20.0,
+                              myweight: FontWeight.bold,
+                              mycolor: Theme.of(context).primaryColor),
+                          IconButton(
+                            icon: Icon(darkModeIcon),
+                            color: Theme.of(context).primaryColor,
+                            onPressed: () {
+                              setState(() {
+                                if (darkModeIcon == Icons.dark_mode) {
+                                  darkModeIcon = Icons.light_mode;
+                                  DynamicTheme.of(context)!
+                                      .setTheme(AppThemes.Light);
+                                } else {
+                                  darkModeIcon = Icons.dark_mode;
+                                  DynamicTheme.of(context)!
+                                      .setTheme(AppThemes.Dark);
+                                }
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          MyText(
+                              mytext: "Clear data",
+                              textSize: 20.0,
+                              myweight: FontWeight.bold,
+                              mycolor: Theme.of(context).primaryColor),
+                          IconButton(
+                            icon: const Icon(Icons.restore_page),
+                            color: Theme.of(context).primaryColor,
+                            onPressed: () {
+                              showAlertDialog(context);
+                            },
                           ),
                         ],
                       ),
@@ -284,5 +351,64 @@ class _ColorEditorState extends State<ColorEditor> {
       x = prefs.getInt(type)!;
     }
     return x;
+  }
+
+  showAlertDialog(BuildContext context) {
+    // set up the buttons
+    // ignore: deprecated_member_use
+    Widget cancelButton = FlatButton(
+      child: const MyText(
+          mytext: "NAAH",
+          textSize: 14.0,
+          myweight: FontWeight.bold,
+          mycolor: Colors.blue),
+      onPressed: () {
+        Navigator.of(context).pop();
+      },
+    );
+    // ignore: deprecated_member_use
+    Widget continueButton = FlatButton(
+      child: const MyText(
+          mytext: "HELL YEAH",
+          textSize: 14.0,
+          myweight: FontWeight.bold,
+          mycolor: Colors.blue),
+      onPressed: () {
+        reset();
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (context) => Selection()));
+      },
+    );
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      backgroundColor: Theme.of(context).backgroundColor,
+      title: const MyText(
+          mytext: "Highway To Clear Data",
+          textSize: 20.0,
+          myweight: FontWeight.bold,
+          mycolor: Colors.blue),
+      content: MyText(
+          mytext:
+              "You sure you want to clear?\nThis means that all your saved schedules will be removed.",
+          textSize: 16.0,
+          myweight: FontWeight.bold,
+          mycolor: Theme.of(context).primaryColor),
+      actions: [
+        cancelButton,
+        continueButton,
+      ],
+    );
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
+
+  reset() async {
+    final pref = await SharedPreferences.getInstance();
+    await pref.clear();
   }
 }
