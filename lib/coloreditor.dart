@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:custom_searchable_dropdown/custom_searchable_dropdown.dart';
 import 'package:dynamic_themes/dynamic_themes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -5,16 +8,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/calendar.dart';
 import 'package:timely/selection.dart';
 import 'package:timely/themes/themes.dart';
+import 'package:timely/widgets/objects/majorobject.dart';
 import 'package:timely/widgets/text.dart';
 
 class ColorEditor extends StatefulWidget {
-  final String majorId, majorLbl;
-  final bool grp;
+  final String majorId, majorLbl, loverMajorId;
+  final bool grp, lover;
   const ColorEditor(
       {Key? key,
       required this.majorId,
       required this.majorLbl,
-      required this.grp})
+      required this.grp,
+      required this.loverMajorId,
+      required this.lover})
       : super(key: key);
 
   @override
@@ -24,11 +30,22 @@ class ColorEditor extends StatefulWidget {
 class _ColorEditorState extends State<ColorEditor> {
   Color tpcolor = Colors.red, tdcolor = Colors.blue, ccolor = Colors.green;
   late IconData darkModeIcon;
+  late IconData loverModeIcon;
+  late bool loverModeIsActive = widget.lover;
+  List<Major> listToSearch = [];
+  List<String> listOfMajors = [];
+  String selectedMajor = "";
 
   @override
   void initState() {
     super.initState();
 
+    loverModeIsActive = widget.lover;
+    if (!widget.lover) {
+      loverModeIcon = Icons.sentiment_dissatisfied_rounded;
+    } else {
+      loverModeIcon = Icons.sentiment_satisfied_alt;
+    }
     getColors("tp").then((value) {
       setState(() {
         tpcolor = Color(value);
@@ -46,30 +63,71 @@ class _ColorEditorState extends State<ColorEditor> {
         ccolor = Color(value);
       });
     });
+
+    gettingMajor();
+  }
+
+  String getMajorId(majorLbl) {
+    String majorId = "";
+    for (int i = 0; i < listToSearch.length; i++) {
+      if (listToSearch[i].label == majorLbl) {
+        majorId = listToSearch[i].majorId;
+      }
+    }
+    return majorId;
+  }
+
+  navigation() {
+    if (loverModeIsActive && selectedMajor != "") {
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => Calendar(
+                grp: widget.grp,
+                majorId: widget.majorId,
+                majorLbl: widget.majorLbl,
+                lover: loverModeIsActive,
+                loverMajorId: getMajorId(selectedMajor),
+              )));
+    } else if (loverModeIsActive && selectedMajor == "") {
+      final snackBar = SnackBar(
+        duration: const Duration(seconds: 2),
+        content: const Text('You need to pick a major for your lover!!'),
+        action: SnackBarAction(
+          label: 'Ok',
+          onPressed: () {},
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => Calendar(
+                grp: true,
+                majorId: widget.majorId,
+                majorLbl: widget.majorLbl,
+                lover: loverModeIsActive,
+                loverMajorId: "",
+              )));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
 
-    //if (Theme.of(context).backgroundColor == Colors.white) {
     if (DynamicTheme.of(context)!.themeId == AppThemes.Light.toInt()) {
       darkModeIcon = Icons.light_mode;
     } else {
       darkModeIcon = Icons.dark_mode;
     }
     return WillPopScope(
-      onWillPop: () async => false,
+      onWillPop: () async {
+        navigation();
+        return true;
+      },
       child: Scaffold(
         appBar: AppBar(
           leading: InkWell(
             onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => Calendar(
-                        grp: true,
-                        majorId: widget.majorId,
-                        majorLbl: widget.majorLbl,
-                      )));
+              navigation();
             },
             child: Icon(
               Icons.arrow_back,
@@ -88,6 +146,7 @@ class _ColorEditorState extends State<ColorEditor> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                //title
                 SizedBox(
                   width: size.width * 0.8,
                   child: MyText(
@@ -107,7 +166,7 @@ class _ColorEditorState extends State<ColorEditor> {
                         color: DynamicTheme.of(context)!.themeId ==
                                 AppThemes.Light.toInt()
                             ? Colors.black12
-                            : const Color(0xff2d333d),
+                            : Colors.black26,
                         spreadRadius: 5,
                         blurRadius: 5,
                         offset: const Offset(0, 3),
@@ -124,6 +183,77 @@ class _ColorEditorState extends State<ColorEditor> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
+                      //lover mode
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          MyText(
+                              mytext: "Lover mode",
+                              textSize: 20.0,
+                              myweight: FontWeight.bold,
+                              mycolor: Theme.of(context).primaryColor),
+                          IconButton(
+                            icon: Icon(loverModeIcon),
+                            color: Theme.of(context).primaryColor,
+                            onPressed: () {
+                              setState(() {
+                                if (loverModeIcon ==
+                                    Icons.sentiment_dissatisfied_rounded) {
+                                  loverModeIcon = Icons.sentiment_satisfied_alt;
+                                } else {
+                                  loverModeIcon =
+                                      Icons.sentiment_dissatisfied_rounded;
+                                }
+                                loverModeIsActive = !loverModeIsActive;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      Visibility(
+                        visible: loverModeIsActive,
+                        child: SizedBox(
+                          width: size.width * 0.70,
+                          child: CustomSearchableDropDown(
+                            padding: const EdgeInsets.all(5.0),
+                            backgroundColor: const Color(0x19101010),
+                            dropdownBackgroundColor: Colors.white,
+                            primaryColor: Colors.black,
+                            items: listOfMajors,
+                            dropDownMenuItems: listOfMajors,
+                            label: "Lover's major ",
+                            suffixIcon: Icon(
+                              Icons.arrow_drop_down_circle_rounded,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                            dropdownLabelStyle: const TextStyle(
+                              fontFamily: 'Comforta',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18.0,
+                              color: Colors.black,
+                            ),
+                            labelStyle: TextStyle(
+                              fontFamily: 'Comforta',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18.0,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  selectedMajor = value;
+                                });
+                              } else {
+                                selectedMajor = "";
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 5.0,
+                      ),
+                      //TP COLOR
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -150,6 +280,7 @@ class _ColorEditorState extends State<ColorEditor> {
                       const SizedBox(
                         height: 5.0,
                       ),
+                      //td color
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -176,6 +307,7 @@ class _ColorEditorState extends State<ColorEditor> {
                       const SizedBox(
                         height: 5.0,
                       ),
+                      //courses color
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -199,6 +331,7 @@ class _ColorEditorState extends State<ColorEditor> {
                           ),
                         ],
                       ),
+                      //theme mode
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -226,6 +359,7 @@ class _ColorEditorState extends State<ColorEditor> {
                           ),
                         ],
                       ),
+                      //clear data
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -410,5 +544,29 @@ class _ColorEditorState extends State<ColorEditor> {
   reset() async {
     final pref = await SharedPreferences.getInstance();
     await pref.clear();
+    await pref.setBool('seen', true);
+  }
+
+  Future<List<Major>> getMajors() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // ignore: prefer_typing_uninitialized_variables
+    var jsonData;
+    List<Major> majors = [];
+    jsonData = prefs.getString('major_key');
+
+    jsonData = prefs.getString('major_key');
+    majors = Major.decode(jsonData);
+
+    return majors;
+  }
+
+  gettingMajor() async {
+    await getMajors().then((value) {
+      for (var item in value) {
+        listToSearch.add(item);
+        listOfMajors.add(item.label);
+      }
+    });
+    setState(() {});
   }
 }

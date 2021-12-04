@@ -41,6 +41,7 @@ dependencies:
   scroll_to_index: ^2.1.0
   flutter_colorpicker: ^0.6.0
   dynamic_themes: ^1.1.0
+  introduction_screen: ^2.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -68,6 +69,9 @@ flutter:
     - lib/animations/sami.png
     - lib/animations/f.gif
     - lib/animations/bg.png
+    - lib/animations/1st.png
+    - lib/animations/2nd.png
+    - lib/animations/3rd.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

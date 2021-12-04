@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class Session {
   final String sessionNumber, time, label, type, classroom, regime;
 

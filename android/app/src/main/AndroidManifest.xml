@@ -4,7 +4,7 @@
    <uses-permission android:name="android.permission.WAKE_LOCK"/>
    <uses-permission android:name="android.permission.INTERNET"/>
    <application
-        android:label="timely"
+        android:label="Fas3a"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

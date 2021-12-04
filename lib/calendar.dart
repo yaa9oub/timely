@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
+import 'dart:io';
 import 'package:dynamic_themes/dynamic_themes.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:scroll_to_index/scroll_to_index.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:timely/animations/animation.dart';
 import 'package:timely/coloreditor.dart';
 import 'package:timely/selection.dart';
 import 'package:timely/themes/themes.dart';
@@ -21,13 +19,15 @@ import 'package:http/http.dart' as http;
 import 'animations/floatinganimation.dart';
 
 class Calendar extends StatefulWidget {
-  final String majorId, majorLbl;
-  final bool grp;
+  final String majorId, majorLbl, loverMajorId;
+  final bool grp, lover;
   const Calendar(
       {Key? key,
       required this.majorId,
       required this.majorLbl,
-      required this.grp})
+      required this.grp,
+      required this.lover,
+      required this.loverMajorId})
       : super(key: key);
 
   @override
@@ -45,19 +45,19 @@ class _CalendarState extends State<Calendar>
     'Saturday'
   ];
   List<TheDay> myDays = [];
+  List<TheDay> herDays = [];
   List<Abscence> abscences = [];
   IconData darkModeIcon = Icons.dark_mode;
   late AnimationController _animationController;
   String currentDay = "";
   var selectedDay = -1;
-  late bool isSwitched;
+  late bool isSwitched, loverModeIsActive;
   Color tpcolor = Colors.red, tdcolor = Colors.blue, ccolor = Colors.green;
   List<String> mysessions = ["S1", "S2", "S3", "S4", "S5", "S6"];
 
   @override
   void initState() {
     super.initState();
-    //setState(() {});
     getColors("tp").then((value) {
       setState(() {
         tpcolor = Color(value);
@@ -74,6 +74,7 @@ class _CalendarState extends State<Calendar>
       });
     });
     isSwitched = widget.grp;
+    loverModeIsActive = widget.lover;
     _animationController =
         AnimationController(vsync: this, duration: const Duration(seconds: 2));
     DateTime date = DateTime.now();
@@ -82,7 +83,10 @@ class _CalendarState extends State<Calendar>
     } else {
       currentDay = DateFormat('EEEE').format(date);
     }
-    gettingDays(isSwitched);
+    gettingDays(isSwitched, widget.majorId);
+    if (loverModeIsActive && widget.loverMajorId != "") {
+      gettingLoverDays(widget.loverMajorId);
+    }
   }
 
   showAlertDialog(BuildContext context, String lbl, int btn) {
@@ -277,23 +281,6 @@ class _CalendarState extends State<Calendar>
     return abscences;
   }
 
-  Session getSessionDesc(List<Session> session, currentSession) {
-    Session s = Session(
-        sessionNumber: currentSession,
-        time: getSessionTime(currentSession),
-        label: "",
-        type: "",
-        classroom: "",
-        regime: "");
-    for (var i = 0; i < session.length; i++) {
-      if (currentSession == session[i].sessionNumber) {
-        s = session[i];
-        break;
-      }
-    }
-    return s;
-  }
-
   Widget getAbscenceBloc(bool b, Session session) {
     return b
         ? Row(
@@ -370,18 +357,40 @@ class _CalendarState extends State<Calendar>
         : Container();
   }
 
-  Widget getDescWidget(String day, Session session) {
-    return session.label != ""
+  List<Session> getSessionDesc(List<Session> session, currentSession) {
+    List<Session> lista = [];
+
+    for (var i = 0; i < session.length; i++) {
+      if (currentSession == session[i].sessionNumber) {
+        lista.add(session[i]);
+      }
+    }
+
+    if (lista.isEmpty) {
+      lista.add(Session(
+          sessionNumber: currentSession,
+          time: getSessionTime(currentSession),
+          label: "",
+          type: "",
+          classroom: "",
+          regime: ""));
+    }
+
+    return lista;
+  }
+
+  Widget getDescWidget(String day, List<Session> sessions) {
+    return sessions[0].label != ""
         ? Column(
             children: [
               //Session
               SessionWidget(
-                  session: session.sessionNumber,
-                  time: getSessionTime(session.sessionNumber)),
+                  session: sessions[0].sessionNumber,
+                  time: getSessionTime(sessions[0].sessionNumber)),
               const SizedBox(
                 height: 5.0,
               ),
-
+              //desc
               Container(
                   width: MediaQuery.of(context).size.width,
                   decoration: BoxDecoration(
@@ -396,7 +405,7 @@ class _CalendarState extends State<Calendar>
                           offset: const Offset(4, 4),
                         )
                       ],
-                      color: setSpecificColor(session.type, 1),
+                      color: setSpecificColor(sessions[0].type, 1),
                       borderRadius: const BorderRadius.only(
                         bottomLeft: Radius.circular(4.0),
                         topLeft: Radius.circular(4.0),
@@ -411,7 +420,7 @@ class _CalendarState extends State<Calendar>
                         Padding(
                           padding: const EdgeInsets.all(3.0),
                           child: MyText(
-                            mytext: session.type,
+                            mytext: sessions[0].type,
                             textSize: 15,
                             myweight: FontWeight.normal,
                             mycolor: Colors.white,
@@ -421,10 +430,11 @@ class _CalendarState extends State<Calendar>
                         Padding(
                           padding: const EdgeInsets.all(3.0),
                           child: MyText(
-                            mytext: session.label.length > 50
-                                ? session.label.substring(5, 30) + ". . ."
-                                : session.label
-                                    .substring(5, session.label.length),
+                            mytext: sessions[0].label.length > 50
+                                ? sessions[0].label.substring(5, 30) + ". . ."
+                                : sessions[0]
+                                    .label
+                                    .substring(5, sessions[0].label.length),
                             textSize: 22.0,
                             myweight: FontWeight.w600,
                             mycolor: Colors.white,
@@ -436,7 +446,7 @@ class _CalendarState extends State<Calendar>
                             Container(
                               padding: const EdgeInsets.all(7.0),
                               decoration: BoxDecoration(
-                                  color: setSpecificColor(session.type, 15),
+                                  color: setSpecificColor(sessions[0].type, 15),
                                   borderRadius: BorderRadius.circular(5.0)),
                               child: Row(
                                 mainAxisAlignment:
@@ -454,7 +464,7 @@ class _CalendarState extends State<Calendar>
                                   Padding(
                                     padding: const EdgeInsets.all(2.0),
                                     child: MyText(
-                                        mytext: session.regime,
+                                        mytext: sessions[0].regime,
                                         textSize: 14,
                                         myweight: FontWeight.normal,
                                         mycolor: Colors.white),
@@ -468,7 +478,7 @@ class _CalendarState extends State<Calendar>
                             Container(
                               padding: const EdgeInsets.all(7.0),
                               decoration: BoxDecoration(
-                                  color: setSpecificColor(session.type, 15),
+                                  color: setSpecificColor(sessions[0].type, 15),
                                   borderRadius: BorderRadius.circular(5.0)),
                               child: Row(
                                 mainAxisAlignment:
@@ -486,7 +496,7 @@ class _CalendarState extends State<Calendar>
                                   Padding(
                                     padding: const EdgeInsets.all(2.0),
                                     child: MyText(
-                                        mytext: session.classroom,
+                                        mytext: sessions[0].classroom,
                                         textSize: 14,
                                         myweight: FontWeight.normal,
                                         mycolor: Colors.white),
@@ -500,19 +510,165 @@ class _CalendarState extends State<Calendar>
                           height: 5.0,
                         ),
                         // absence
-                        getAbscenceBloc(session.type != "TP", session)
+                        getAbscenceBloc(sessions[0].type != "TP", sessions[0])
                       ],
                     ),
-                  ))
+                  )),
+              sessions.length > 1
+                  ? Column(
+                      children: [
+                        const SizedBox(
+                          height: 10.0,
+                        ),
+                        Container(
+                            width: MediaQuery.of(context).size.width,
+                            decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: DynamicTheme.of(context)!.themeId ==
+                                            AppThemes.Light.toInt()
+                                        ? Colors.black26
+                                        : Colors.black87,
+                                    spreadRadius: 2,
+                                    blurRadius: 7,
+                                    offset: const Offset(4, 4),
+                                  )
+                                ],
+                                color: setSpecificColor(sessions[1].type, 1),
+                                borderRadius: const BorderRadius.only(
+                                  bottomLeft: Radius.circular(4.0),
+                                  topLeft: Radius.circular(4.0),
+                                )),
+                            child: Padding(
+                              padding: const EdgeInsets.all(17.0),
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  //type
+                                  Padding(
+                                    padding: const EdgeInsets.all(3.0),
+                                    child: MyText(
+                                      mytext: sessions[1].type,
+                                      textSize: 15,
+                                      myweight: FontWeight.normal,
+                                      mycolor: Colors.white,
+                                    ),
+                                  ),
+                                  //label
+                                  Padding(
+                                    padding: const EdgeInsets.all(3.0),
+                                    child: MyText(
+                                      mytext: sessions[1].label.length > 50
+                                          ? sessions[1].label.substring(5, 30) +
+                                              ". . ."
+                                          : sessions[1].label.substring(
+                                              5, sessions[1].label.length),
+                                      textSize: 22.0,
+                                      myweight: FontWeight.w600,
+                                      mycolor: Colors.white,
+                                    ),
+                                  ),
+                                  // regime + class
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(7.0),
+                                        decoration: BoxDecoration(
+                                            color: setSpecificColor(
+                                                sessions[1].type, 15),
+                                            borderRadius:
+                                                BorderRadius.circular(5.0)),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceAround,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            const Padding(
+                                              padding: EdgeInsets.all(2.0),
+                                              child: Icon(
+                                                Icons.calendar_today,
+                                                color: Colors.white,
+                                                size: 17.0,
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(2.0),
+                                              child: MyText(
+                                                  mytext: sessions[1].regime,
+                                                  textSize: 14,
+                                                  myweight: FontWeight.normal,
+                                                  mycolor: Colors.white),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: 5.0,
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.all(7.0),
+                                        decoration: BoxDecoration(
+                                            color: setSpecificColor(
+                                                sessions[1].type, 15),
+                                            borderRadius:
+                                                BorderRadius.circular(5.0)),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceAround,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            const Padding(
+                                              padding: EdgeInsets.all(2.0),
+                                              child: Icon(
+                                                Icons.location_on,
+                                                color: Colors.white,
+                                                size: 17.0,
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(2.0),
+                                              child: MyText(
+                                                  mytext: sessions[1].classroom,
+                                                  textSize: 14,
+                                                  myweight: FontWeight.normal,
+                                                  mycolor: Colors.white),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(
+                                    height: 5.0,
+                                  ),
+                                  // absence
+                                  getAbscenceBloc(
+                                      sessions[1].type != "TP", sessions[1])
+                                ],
+                              ),
+                            )),
+                      ],
+                    )
+                  : Container(),
             ],
           )
-        : day != "Saturday"
+        : day != "Saturday" ||
+                (day == "Saturday" &&
+                    (sessions[0].sessionNumber == "S1" ||
+                        sessions[0].sessionNumber == "S2" ||
+                        sessions[0].sessionNumber == "S3"))
             ? Column(
                 children: [
                   //Session
                   SessionWidget(
-                      session: session.sessionNumber,
-                      time: getSessionTime(session.sessionNumber)),
+                      session: sessions[0].sessionNumber,
+                      time: getSessionTime(sessions[0].sessionNumber)),
                   const SizedBox(
                     height: 5.0,
                   ),
@@ -523,12 +679,12 @@ class _CalendarState extends State<Calendar>
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: const Alignment(-0.9, -0.8),
-                          stops: const [0.0, 0.5, 0.5, 1],
+                          stops: const [0.0, 0.0, 0.1, 0.1],
                           colors: [
-                            Colors.blue[200] as Color,
-                            Colors.blue[200] as Color,
-                            Theme.of(context).cardColor,
-                            Theme.of(context).cardColor,
+                            Colors.white,
+                            Colors.white,
+                            darken(const Color(0xff2d333d), 1),
+                            darken(const Color(0xff2d333d), 1),
                           ],
                           tileMode: TileMode.repeated,
                         ),
@@ -550,6 +706,120 @@ class _CalendarState extends State<Calendar>
                     child: null,
                   ),
                 ],
+              )
+            : Container();
+  }
+
+  Widget getBothWidget(String day, List<Session> session) {
+    return session[0].label != ""
+        ? Container(
+            height: MediaQuery.of(context).size.height * 0.22,
+            width: MediaQuery.of(context).size.width * 0.45,
+            decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: DynamicTheme.of(context)!.themeId ==
+                            AppThemes.Light.toInt()
+                        ? Colors.black26
+                        : Colors.black87,
+                    spreadRadius: 2,
+                    blurRadius: 7,
+                    offset: const Offset(4, 4),
+                  )
+                ],
+                color: setSpecificColor(session[0].type, 1),
+                borderRadius: BorderRadius.circular(4.0)),
+            child: Padding(
+              padding: const EdgeInsets.all(17.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  //label
+                  Padding(
+                    padding: const EdgeInsets.all(3.0),
+                    child: MyText(
+                      mytext: session[0].label.length > 30
+                          ? session[0].label.substring(5, 25) + ". . ."
+                          : session[0]
+                              .label
+                              .substring(5, session[0].label.length),
+                      textSize: 18.0,
+                      myweight: FontWeight.w600,
+                      mycolor: Colors.white,
+                    ),
+                  ),
+                  // class
+                  Container(
+                    padding: const EdgeInsets.all(7.0),
+                    decoration: BoxDecoration(
+                        color: setSpecificColor(session[0].type, 15),
+                        borderRadius: BorderRadius.circular(5.0)),
+                    child: SizedBox(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.all(2.0),
+                            child: Icon(
+                              Icons.location_on,
+                              color: Colors.white,
+                              size: 17.0,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(2.0),
+                            child: MyText(
+                                mytext: session[0].classroom.length > 5
+                                    ? session[0].classroom.substring(0, 8) +
+                                        " . ."
+                                    : session[0].classroom,
+                                textSize: 12,
+                                myweight: FontWeight.normal,
+                                mycolor: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ))
+        : day != "Saturday" ||
+                (day == "Saturday" &&
+                    (session[0].sessionNumber == "S1" ||
+                        session[0].sessionNumber == "S2" ||
+                        session[0].sessionNumber == "S3"))
+            ? Container(
+                height: MediaQuery.of(context).size.height * 0.22,
+                width: MediaQuery.of(context).size.width * 0.45,
+                decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: const Alignment(-0.9, -0.8),
+                      stops: const [0.0, 0.0, 0.1, 0.1],
+                      colors: [
+                        Colors.white,
+                        Colors.white,
+                        darken(const Color(0xff2d333d), 1),
+                        darken(const Color(0xff2d333d), 1),
+                      ],
+                      tileMode: TileMode.repeated,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: DynamicTheme.of(context)!.themeId ==
+                                AppThemes.Light.toInt()
+                            ? Colors.black26
+                            : Colors.black87,
+                        spreadRadius: 2,
+                        blurRadius: 7,
+                        offset: const Offset(4, 4),
+                      )
+                    ],
+                    borderRadius: BorderRadius.circular(4.0)),
+                child: null,
               )
             : Container();
   }
@@ -580,47 +850,210 @@ class _CalendarState extends State<Calendar>
     return schedule;
   }
 
-  Future<List<TheDay>> getDays(bool groupe) async {
+  List<Widget> getCoupleSchedule() {
+    List<Widget> schedule = [];
+    for (var i = 0; i < days.length; i++) {
+      schedule.add(herDays.isEmpty
+          ? const Center(
+              child: AnimatedImage(
+              img: 'lib/animations/sami.png',
+              size: 1.0,
+            ))
+          : ListView.builder(
+              //itemCount: herDays[i].sessions.length,
+              itemCount: mysessions.length,
+              itemBuilder: (BuildContext context, int index) {
+                return Column(
+                  children: [
+                    Padding(
+                        padding: const EdgeInsets.only(
+                            left: 8.0, bottom: 8.0, top: 8.0),
+                        child: Column(
+                          children: [
+                            index == 0
+                                ? Container(
+                                    padding: const EdgeInsets.all(10.0),
+                                    width: MediaQuery.of(context).size.width,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceAround,
+                                      children: [
+                                        MyText(
+                                            mytext: "Your Major",
+                                            textSize: 18.0,
+                                            myweight: FontWeight.w900,
+                                            mycolor:
+                                                Theme.of(context).primaryColor),
+                                        MyText(
+                                            mytext: "Lover's Major",
+                                            textSize: 18.0,
+                                            myweight: FontWeight.w900,
+                                            mycolor:
+                                                Theme.of(context).primaryColor),
+                                      ],
+                                    ),
+                                  )
+                                : Container(),
+                            //Session
+                            myDays[i].day == "Saturday" &&
+                                    (mysessions[index] == "S4" ||
+                                        mysessions[index] == "S5" ||
+                                        mysessions[index] == "S6")
+                                ? Container()
+                                : Padding(
+                                    padding: const EdgeInsets.only(left: 8.0),
+                                    child: SessionWidget(
+                                        session: mysessions[index],
+                                        time:
+                                            getSessionTime(mysessions[index])),
+                                  ),
+                            const SizedBox(
+                              height: 8.0,
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                getBothWidget(
+                                  myDays[i].day,
+                                  getSessionDesc(
+                                      myDays[i].sessions, mysessions[index]),
+                                ),
+                                getBothWidget(
+                                  herDays[i].day,
+                                  getSessionDesc(
+                                      herDays[i].sessions, mysessions[index]),
+                                ),
+                              ],
+                            ),
+                          ],
+                        )),
+                  ],
+                );
+              }));
+    }
+    return schedule;
+  }
+
+  clearSavedMajors(String savedMajors) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> listOfSavedMajors = savedMajors.split("*");
+    for (var major in listOfSavedMajors) {
+      prefs.remove(major);
+    }
+  }
+
+  Future<List<TheDay>> getDays(bool groupe, major) async {
     String x;
     if (groupe) {
       x = '2';
     } else {
       x = '1';
     }
+
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     List<TheDay> days = [];
-    var jsonData;
-    jsonData = await prefs.getString(widget.majorId);
+    // ignore: prefer_typing_uninitialized_variables
+    var jsonData, allSavedMajors, updateOn, verifyUpdate, savedUpdateTime;
 
+    //get all of the saved majors
+    allSavedMajors = prefs.getString("allsavedmajors");
+    //get the last update from cache
+    savedUpdateTime = prefs.getString("updatedOn");
+
+    //before checking for updates
+    // must check for internet
+    //connectivity
+    try {
+      final result = await InternetAddress.lookup('example.com');
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        //get the last update from api
+        updateOn = await http.get(Uri.parse(
+            'https://issatso-majors-schedule.herokuapp.com/api/v1/majors/MXZhMDMwOWI='));
+        verifyUpdate = json.decode(updateOn.body);
+
+        //if no update time saved then save time
+        //then fetch major's data from api
+        if (savedUpdateTime == null) {
+          prefs.setString("updatedOn", verifyUpdate["updatedOn"]);
+        } else {
+          //if update time changed then clear cache
+          if (savedUpdateTime != verifyUpdate["updatedOn"]) {
+            //clear cache and update
+            print("Clearing cache");
+            if (allSavedMajors != null) {
+              clearSavedMajors(allSavedMajors);
+              prefs.setString("updatedOn", verifyUpdate["updatedOn"]);
+            }
+          }
+        }
+      }
+    } on SocketException catch (_) {
+      jsonData = prefs.getString(major);
+      if (jsonData.toString() == "null") {
+        final snackBar = SnackBar(
+          duration: const Duration(seconds: 2),
+          content: const Text('Please connect to internet and try again !!'),
+          action: SnackBarAction(
+            label: 'Ok',
+            onPressed: () {},
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
+    }
+
+    //get chosen major
+    jsonData = prefs.getString(major);
+    //if major is not saved
+    //or major should be updated
     if (jsonData.toString() == "null") {
-      print("schedule not saved");
+      print("major is not saved");
       var data = await http.get(Uri.parse(
           'https://issatso-majors-schedule.herokuapp.com/api/v1/majors/' +
-              widget.majorId));
+              major));
       jsonData = json.decode(data.body);
       days = getDataFromApi(jsonData, x);
-      await prefs.setString(widget.majorId, data.body);
-      //await prefs.setString('selected_major_key', data.body);
-    } else {
-      print("schedule saved");
-      String? dataBody = await prefs.getString(widget.majorId);
+      await prefs.setString(major, data.body);
+      if (allSavedMajors != null) {
+        prefs.setString("allsavedmajors", allSavedMajors + "*" + major);
+      } else {
+        prefs.setString("allsavedmajors", major);
+      }
+    }
+    //if major is saved
+    else {
+      String? dataBody = prefs.getString(major);
       if (dataBody != null) {
         jsonData = json.decode(dataBody);
         days = getDataFromApi(jsonData, x);
       }
     }
-
     return days;
   }
 
-  gettingDays(bool g) async {
-    await getDays(g).then((value) {
+  gettingDays(bool g, String major) async {
+    await getDays(g, major).then((value) {
       for (var element in value) {
         myDays.add(element);
       }
     });
+    print("your");
+    print(myDays.length);
+    print(herDays.length);
     setState(() {});
     gettingAbscence();
+  }
+
+  gettingLoverDays(String major) async {
+    await getDays(false, major).then((value) {
+      for (var element in value) {
+        herDays.add(element);
+      }
+    });
+    print("her");
+    print(myDays.length);
+    print(herDays.length);
+    setState(() {});
   }
 
   int getSelectedDay() {
@@ -842,15 +1275,12 @@ class _CalendarState extends State<Calendar>
     for (var currentDay in jsonData['schedule'][x].keys) {
       List<Session> mySessions = [];
       //To run through all the sessions
-      int index = 0;
       for (var currentSession in jsonData['schedule'][x][currentDay].keys) {
-        index = index + 1;
         String time = getSessionTime(currentSession);
 
         List s = jsonData['schedule'][x][currentDay][currentSession];
         String lbl = '', classRoom = '', type = '', regime = '';
-        //To run through eah session
-
+        //To run through each session
         for (int i = 0; i < s.length; i++) {
           type = jsonData['schedule'][x][currentDay][currentSession][i]['type'];
           lbl = jsonData['schedule'][x][currentDay][currentSession][i]['desc'];
@@ -878,26 +1308,29 @@ class _CalendarState extends State<Calendar>
         }
       }
 
-      switch (currentDay) {
-        case "1-Lundi":
-          currentDay = "Monday";
-          break;
-        case "2-Mardi":
-          currentDay = "Tuesday";
-          break;
-        case "3-Mercredi":
-          currentDay = "Wednesday";
-          break;
-        case "4-Jeudi":
-          currentDay = "Thursday";
-          break;
-        case "5-Vendredi":
-          currentDay = "Friday";
-          break;
-        case "6-Samedi":
-          currentDay = "Saturday";
-          break;
-        default:
+      //change day from french to english
+      if (true) {
+        switch (currentDay) {
+          case "1-Lundi":
+            currentDay = "Monday";
+            break;
+          case "2-Mardi":
+            currentDay = "Tuesday";
+            break;
+          case "3-Mercredi":
+            currentDay = "Wednesday";
+            break;
+          case "4-Jeudi":
+            currentDay = "Thursday";
+            break;
+          case "5-Vendredi":
+            currentDay = "Friday";
+            break;
+          case "6-Samedi":
+            currentDay = "Saturday";
+            break;
+          default:
+        }
       }
 
       TheDay myDay = TheDay(day: currentDay, sessions: mySessions);
@@ -972,7 +1405,7 @@ class _CalendarState extends State<Calendar>
         child: Scaffold(
           appBar: AppBar(
             leading: Container(),
-            backgroundColor: Theme.of(context).backgroundColor,
+            backgroundColor: Theme.of(context).secondaryHeaderColor,
             elevation: 0,
             toolbarHeight: size.height * 0.13,
             //TOPPER CONTENT
@@ -989,7 +1422,7 @@ class _CalendarState extends State<Calendar>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         MyText(
-                          mytext: "Timely",
+                          mytext: "Fas3a",
                           textSize: 25.0,
                           myweight: FontWeight.w900,
                           mycolor: Theme.of(context).primaryColor,
@@ -1012,9 +1445,11 @@ class _CalendarState extends State<Calendar>
                               onPressed: () {
                                 Navigator.of(context).push(MaterialPageRoute(
                                     builder: (context) => ColorEditor(
-                                          grp: true,
+                                          grp: widget.grp,
                                           majorId: widget.majorId,
                                           majorLbl: widget.majorLbl,
+                                          lover: widget.lover,
+                                          loverMajorId: "",
                                         )));
                               },
                             ),
@@ -1095,7 +1530,8 @@ class _CalendarState extends State<Calendar>
             ),
             color: Theme.of(context).backgroundColor,
             child: TabBarView(
-              children: getScheduleWidget(),
+              children:
+                  loverModeIsActive ? getCoupleSchedule() : getScheduleWidget(),
             ),
           ),
         ),
