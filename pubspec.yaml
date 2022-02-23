@@ -43,6 +43,7 @@ dependencies:
   dynamic_themes: ^1.1.0
   introduction_screen: ^2.1.0
   flutter_screenutil: ^5.0.1
+  rename: ^2.0.1
   
 dev_dependencies:
   flutter_test:
