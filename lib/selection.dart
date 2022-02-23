@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui';
-
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -103,186 +103,191 @@ class _SelectionState extends State<Selection>
     return Scaffold(
       body: Container(
         color: Theme.of(context).backgroundColor,
-        child: Stack(
-          children: [
-            Positioned(
-                bottom: 10.0,
-                left: MediaQuery.of(context).size.width * 0.01,
-                child: const Opacity(
-                    opacity: 0.7,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+          child: Stack(
+            children: [
+              const Align(
+                alignment: Alignment.bottomCenter,
+                child: Opacity(
+                    opacity: 0.6,
                     child: AnimatedImage(
                       img: 'lib/animations/bg.png',
                       size: 5.0,
-                    ))),
-            Container(
-              width: size.width,
-              height: size.height,
-              padding: EdgeInsets.only(top: size.height * 0.09),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      height: size.height * 0.06,
-                    ),
-                    Text(
-                      "PICK YOUR MAJOR",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Comforta',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 45.0,
-                        color: Theme.of(context).primaryColor,
+                    )),
+              ),
+              Container(
+                width: size.width,
+                height: size.height,
+                padding: EdgeInsets.only(top: size.height * 0.15),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: size.height * 0.06,
                       ),
-                    ),
-                    SizedBox(
-                      height: size.height * 0.03,
-                    ),
-                    listOfMajors.isEmpty
-                        ? CircularProgressIndicator(
-                            color: Theme.of(context).primaryColor,
-                          )
-                        : SizedBox(
-                            width: size.width * 0.70,
-                            child: CustomSearchableDropDown(
-                              padding: const EdgeInsets.all(5.0),
-                              backgroundColor: const Color(0x19101010),
-                              dropdownBackgroundColor: Colors.white,
-                              primaryColor: Colors.black,
-                              items: listOfMajors,
-                              dropDownMenuItems: listOfMajors,
-                              label: 'Select a major',
-                              suffixIcon: Icon(
-                                Icons.arrow_drop_down_circle_rounded,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                              dropdownLabelStyle: const TextStyle(
-                                fontFamily: 'Comforta',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18.0,
-                                color: Colors.black,
-                              ),
-                              labelStyle: TextStyle(
-                                fontFamily: 'Comforta',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18.0,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    selectedMajor = value;
-                                  });
-                                  controller.forward();
-                                } else {
-                                  selectedMajor = "";
-                                }
-                              },
-                            ),
-                          ),
-                    SizedBox(
-                      height: size.height * 0.03,
-                    ),
-                    SlideTransition(
-                      position: offset,
-                      child: SizedBox(
-                        width: size.width * 0.65,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            MyText(
-                              myweight: FontWeight.bold,
-                              mytext: "Subgroup",
-                              textSize: 18.0,
-                              mycolor: Theme.of(context).primaryColor,
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                MyText(
-                                  myweight: FontWeight.bold,
-                                  mytext: "01",
-                                  textSize: 18.0,
-                                  mycolor: Theme.of(context).primaryColor,
-                                ),
-                                Switch(
-                                  value: isSwitched,
-                                  onChanged: (value) async {
-                                    setState(() {
-                                      isSwitched = value;
-                                    });
-                                  },
-                                  inactiveTrackColor: Colors.grey,
-                                  activeTrackColor: Colors.grey[350],
-                                  activeColor: Colors.white,
-                                ),
-                                MyText(
-                                  myweight: FontWeight.bold,
-                                  mytext: "02",
-                                  textSize: 18.0,
-                                  mycolor: Theme.of(context).primaryColor,
-                                )
-                              ],
-                            )
-                          ],
+                      Text(
+                        "PICK YOUR MAJOR",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Comforta',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 60.0,
+                          color: Theme.of(context).primaryColor,
                         ),
                       ),
-                    ),
-                    SizedBox(
-                      height: size.height * 0.03,
-                    ),
-                    SlideTransition(
-                      position: offset,
-                      child: SizedBox(
-                        width: size.width * 0.65,
-                        // ignore: deprecated_member_use
-                        child: FlatButton(
-                          onPressed: () {
-                            setState(() {
-                              // ignore: unnecessary_null_comparison
-                              if (selectedMajor != null) {
-                                saveMajor(
-                                    getMajorId(selectedMajor), selectedMajor);
-                                Navigator.of(context).push(MaterialPageRoute(
-                                    builder: (context) => Calendar(
-                                          majorId: getMajorId(selectedMajor),
-                                          majorLbl: selectedMajor,
-                                          grp: isSwitched,
-                                          lover: false,
-                                          loverMajorId: '',
-                                        )));
-                              }
-                            });
-                          },
-                          color: Theme.of(context).cardColor,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5.0)),
-                          child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Row(
+                      SizedBox(
+                        height: size.height * 0.03,
+                      ),
+                      listOfMajors.isEmpty
+                          ? CircularProgressIndicator(
+                              color: Theme.of(context).primaryColor,
+                            )
+                          : SizedBox(
+                              width: size.width * 0.70,
+                              child: CustomSearchableDropDown(
+                                padding: const EdgeInsets.all(5.0),
+                                backgroundColor: const Color(0x19101010),
+                                dropdownBackgroundColor: Colors.white,
+                                primaryColor: Colors.black,
+                                items: listOfMajors,
+                                dropDownMenuItems: listOfMajors,
+                                label: 'Select a major',
+                                suffixIcon: Icon(
+                                  Icons.arrow_drop_down_circle_rounded,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                                dropdownLabelStyle: const TextStyle(
+                                  fontFamily: 'Comforta',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18.0,
+                                  color: Colors.black,
+                                ),
+                                labelStyle: TextStyle(
+                                  fontFamily: 'Comforta',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18.0,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      selectedMajor = value;
+                                    });
+                                    controller.forward();
+                                  } else {
+                                    selectedMajor = "";
+                                  }
+                                },
+                              ),
+                            ),
+                      SizedBox(
+                        height: size.height * 0.03,
+                      ),
+                      SlideTransition(
+                        position: offset,
+                        child: SizedBox(
+                          width: size.width * 0.65,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              MyText(
+                                myweight: FontWeight.bold,
+                                mytext: "Subgroup",
+                                textSize: 18.0,
+                                mycolor: Theme.of(context).primaryColor,
+                              ),
+                              Row(
                                 mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   MyText(
-                                    mycolor: Theme.of(context).primaryColorDark,
-                                    mytext: "I MADE MY CHOICE ",
-                                    myweight: FontWeight.normal,
-                                    textSize: 15.0,
+                                    myweight: FontWeight.bold,
+                                    mytext: "01",
+                                    textSize: 18.0,
+                                    mycolor: Theme.of(context).primaryColor,
                                   ),
-                                  Icon(
-                                    Icons.done,
-                                    color: Theme.of(context).primaryColorDark,
+                                  Switch(
+                                    value: isSwitched,
+                                    onChanged: (value) async {
+                                      setState(() {
+                                        isSwitched = value;
+                                      });
+                                    },
+                                    inactiveTrackColor: Colors.grey,
+                                    activeTrackColor: Colors.grey[350],
+                                    activeColor: Colors.white,
                                   ),
+                                  MyText(
+                                    myweight: FontWeight.bold,
+                                    mytext: "02",
+                                    textSize: 18.0,
+                                    mycolor: Theme.of(context).primaryColor,
+                                  )
                                 ],
-                              )),
+                              )
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      SizedBox(
+                        height: size.height * 0.03,
+                      ),
+                      SlideTransition(
+                        position: offset,
+                        child: SizedBox(
+                          width: size.width * 0.65,
+                          // ignore: deprecated_member_use
+                          child: FlatButton(
+                            onPressed: () {
+                              setState(() {
+                                // ignore: unnecessary_null_comparison
+                                if (selectedMajor != null) {
+                                  saveMajor(
+                                      getMajorId(selectedMajor), selectedMajor);
+                                  Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (context) => Calendar(
+                                            majorId: getMajorId(selectedMajor),
+                                            majorLbl: selectedMajor,
+                                            grp: isSwitched,
+                                            lover: false,
+                                            loverMajorId: '',
+                                          )));
+                                }
+                              });
+                            },
+                            color: Theme.of(context).cardColor,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0)),
+                            child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    MyText(
+                                      mycolor:
+                                          Theme.of(context).primaryColorDark,
+                                      mytext: "I MADE MY CHOICE ",
+                                      myweight: FontWeight.normal,
+                                      textSize: 15.0,
+                                    ),
+                                    Icon(
+                                      Icons.done,
+                                      color: Theme.of(context).primaryColorDark,
+                                    ),
+                                  ],
+                                )),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

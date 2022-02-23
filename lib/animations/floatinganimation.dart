@@ -29,14 +29,9 @@ class _AnimatedImageState extends State<AnimatedImage>
   Widget build(BuildContext context) {
     return SlideTransition(
         position: _animation,
-        child: Column(
-          children: [
-            SizedBox(
-                child: Image.asset(
-              widget.img,
-              scale: widget.size,
-            ))
-          ],
+        child: Image.asset(
+          widget.img,
+          scale: widget.size,
         ));
   }
 }

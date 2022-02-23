@@ -42,6 +42,8 @@ dependencies:
   flutter_colorpicker: ^0.6.0
   dynamic_themes: ^1.1.0
   introduction_screen: ^2.1.0
+  flutter_screenutil: ^5.0.1
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

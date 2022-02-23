@@ -281,6 +281,46 @@ class _CalendarState extends State<Calendar>
     return abscences;
   }
 
+  showAlertAbscenceDialog(BuildContext context, String msg, String btn) {
+    // set up the button
+    Widget okButton = TextButton(
+      child: MyText(
+          mytext: btn,
+          textSize: 14.0,
+          myweight: FontWeight.bold,
+          mycolor: Colors.blue),
+      onPressed: () {
+        Navigator.of(context).pop();
+      },
+    );
+
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      backgroundColor: Theme.of(context).backgroundColor,
+      title: const MyText(
+          mytext: "Highway To Elimination",
+          textSize: 20.0,
+          myweight: FontWeight.bold,
+          mycolor: Colors.blue),
+      content: MyText(
+          mytext: msg,
+          textSize: 16.0,
+          myweight: FontWeight.normal,
+          mycolor: Colors.black),
+      actions: [
+        okButton,
+      ],
+    );
+
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
+
   Widget getAbscenceBloc(bool b, Session session) {
     return b
         ? Row(
@@ -301,7 +341,12 @@ class _CalendarState extends State<Calendar>
                     //+1
                     InkWell(
                       onTap: () {
-                        showAlertDialog(context, session.label, 2);
+                        getAbscenceNumber(session.label) == 0
+                            ? showAlertAbscenceDialog(
+                                context,
+                                "Your abscences are already full.\nGet a life and stop studying.",
+                                "Ai ai captain")
+                            : showAlertDialog(context, session.label, 2);
                       },
                       child: Container(
                         padding: const EdgeInsets.all(8.0),
@@ -328,7 +373,12 @@ class _CalendarState extends State<Calendar>
                     //-1
                     InkWell(
                       onTap: () {
-                        showAlertDialog(context, session.label, 1);
+                        getAbscenceNumber(session.label) == 3
+                            ? showAlertAbscenceDialog(
+                                context,
+                                "Your abscences are empty.\nSee you in July ;)",
+                                "Ugh damn it")
+                            : showAlertDialog(context, session.label, 1);
                       },
                       child: Container(
                         padding: const EdgeInsets.all(8.0),
@@ -384,9 +434,13 @@ class _CalendarState extends State<Calendar>
         ? Column(
             children: [
               //Session
-              SessionWidget(
-                  session: sessions[0].sessionNumber,
-                  time: getSessionTime(sessions[0].sessionNumber)),
+              Row(
+                children: [
+                  SessionWidget(
+                      session: sessions[0].sessionNumber,
+                      time: getSessionTime(sessions[0].sessionNumber)),
+                ],
+              ),
               const SizedBox(
                 height: 5.0,
               ),
@@ -419,11 +473,16 @@ class _CalendarState extends State<Calendar>
                         //type
                         Padding(
                           padding: const EdgeInsets.all(3.0),
-                          child: MyText(
-                            mytext: sessions[0].type,
-                            textSize: 15,
-                            myweight: FontWeight.normal,
-                            mycolor: Colors.white,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              MyText(
+                                mytext: sessions[0].type,
+                                textSize: 15,
+                                myweight: FontWeight.normal,
+                                mycolor: Colors.white,
+                              ),
+                            ],
                           ),
                         ),
                         //label
@@ -949,7 +1008,7 @@ class _CalendarState extends State<Calendar>
     } else {
       x = '1';
     }
-
+    print(major);
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     List<TheDay> days = [];
     // ignore: prefer_typing_uninitialized_variables
@@ -960,15 +1019,22 @@ class _CalendarState extends State<Calendar>
     //get the last update from cache
     savedUpdateTime = prefs.getString("updatedOn");
 
+    //check which day it is
+    DateTime date = DateTime.now();
+    var day = DateFormat('EEEE').format(date);
+    print("xxxxxxxxxxxxxxx " + day);
     //before checking for updates
     // must check for internet
     //connectivity
     try {
       final result = await InternetAddress.lookup('example.com');
-      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+      if (result.isNotEmpty &&
+          result[0].rawAddress.isNotEmpty &&
+          day == "Friday") {
         //get the last update from api
         updateOn = await http.get(Uri.parse(
-            'https://issatso-majors-schedule.herokuapp.com/api/v1/majors/MXZhMDMwOWI='));
+            'https://issatso-majors-schedule.herokuapp.com/api/v1/majors/' +
+                major));
         verifyUpdate = json.decode(updateOn.body);
 
         //if no update time saved then save time
@@ -1092,87 +1158,90 @@ class _CalendarState extends State<Calendar>
     var now = DateTime.now();
     var monthFormatter = DateFormat('MM');
     String month = monthFormatter.format(now);
-    var dayFormatter = DateFormat('MM');
+    var dayFormatter = DateFormat('dd');
     String day = dayFormatter.format(now);
 
-    //1
-    if ((int.parse(day) >= 6 || int.parse(day) <= 11) &&
-        int.parse(month) == 9) {
-      regime = "QA";
+    //Semester2
+    if ((int.parse(day) >= 19 && int.parse(day) <= 22) &&
+        int.parse(month) == 1) {
+      regime = "QA-M1";
+      return regime;
     }
-    //2
-    if ((int.parse(day) >= 13 || int.parse(day) <= 18) &&
-        int.parse(month) == 9) {
-      regime = "QB";
+    if ((int.parse(day) >= 24 && int.parse(day) <= 29) &&
+        int.parse(month) == 1) {
+      regime = "QB-M1";
+      return regime;
     }
-    //3
-    if ((int.parse(day) >= 20 || int.parse(day) <= 25) &&
-        int.parse(month) == 9) {
-      regime = "QA";
+    if (((int.parse(day) >= 31 && int.parse(day) <= 31) &&
+            int.parse(month) == 1) ||
+        (int.parse(day) >= 1 && int.parse(day) <= 5) && int.parse(month) == 2) {
+      regime = "QA-M1";
+      return regime;
     }
-    //4
-    if ((int.parse(day) >= 27 || int.parse(day) <= 09) &&
-        int.parse(month) == 10) {
-      regime = "QB";
+    if ((int.parse(day) >= 7 && int.parse(day) <= 12) &&
+        int.parse(month) == 2) {
+      regime = "QB-M1";
+      return regime;
     }
-    //5
-    if ((int.parse(day) >= 04 || int.parse(day) <= 09) &&
-        int.parse(month) == 10) {
-      regime = "QA";
+    if ((int.parse(day) >= 14 && int.parse(day) <= 19) &&
+        int.parse(month) == 2) {
+      regime = "QA-M1";
+      return regime;
     }
-    //6
-    if ((int.parse(day) >= 11 || int.parse(day) <= 16) &&
-        int.parse(month) == 10) {
-      regime = "QB";
+    if ((int.parse(day) >= 21 && int.parse(day) <= 26) &&
+        int.parse(month) == 2) {
+      regime = "QB-M1";
+      return regime;
     }
-    //7
-    if ((int.parse(day) >= 18 || int.parse(day) <= 23) &&
-        int.parse(month) == 10) {
-      regime = "QA-Z3-M1";
+    if (((int.parse(day) >= 28 && int.parse(day) <= 28) &&
+            int.parse(month) == 2) ||
+        (int.parse(day) >= 1 && int.parse(day) <= 5) && int.parse(month) == 3) {
+      regime = "QA-M1-Z3";
+      return regime;
     }
-    //8
-    if ((int.parse(day) >= 25 || int.parse(day) <= 30) &&
-        int.parse(month) == 10) {
-      regime = "QB-Z4-M1";
+    if ((int.parse(day) >= 07 && int.parse(day) <= 12) &&
+        int.parse(month) == 3) {
+      regime = "DSET";
+      return regime;
     }
-    //9
-    if ((int.parse(day) >= 1 || int.parse(day) <= 6) &&
-        int.parse(month) == 11) {
-      regime = "QA-Z3-M2";
+    if (((int.parse(day) >= 28 && int.parse(day) <= 31) &&
+            int.parse(month) == 3) ||
+        (int.parse(day) >= 1 && int.parse(day) <= 2) && int.parse(month) == 4) {
+      regime = "QB-M2-Z4";
+      return regime;
     }
-    //10
-    if ((int.parse(day) >= 8 || int.parse(day) <= 13) &&
-        int.parse(month) == 11) {
-      regime = "QB-Z4-M2";
+    if ((int.parse(day) >= 04 && int.parse(day) <= 09) &&
+        int.parse(month) == 04) {
+      regime = "QA-M2-Z3";
+      return regime;
     }
-    //11
-    if ((int.parse(day) >= 15 || int.parse(day) <= 20) &&
-        int.parse(month) == 11) {
-      regime = "QA-Z3-M2";
+    if ((int.parse(day) >= 011 && int.parse(day) <= 16) &&
+        int.parse(month) == 04) {
+      regime = "QB-M2-Z4";
+      return regime;
     }
-    //12
-    if ((int.parse(day) >= 22 || int.parse(day) <= 27) &&
-        int.parse(month) == 11) {
-      regime = "QB-Z4-M2";
+    if ((int.parse(day) >= 018 && int.parse(day) <= 23) &&
+        int.parse(month) == 04) {
+      regime = "QA-M2-Z3";
+      return regime;
     }
-    //13
-    if (((int.parse(day) >= 29 || int.parse(day) <= 30) &&
-            int.parse(month) == 11) ||
-        (int.parse(day) >= 1 || int.parse(day) <= 4) &&
-            int.parse(month) == 12) {
-      regime = "QA-Z3-M2";
+    if ((int.parse(day) >= 25 && int.parse(day) <= 30) &&
+        int.parse(month) == 04) {
+      regime = "QB-M2-Z4";
+      return regime;
     }
-    //14
-    if ((int.parse(day) >= 6 || int.parse(day) <= 11) &&
-        int.parse(month) == 12) {
-      regime = "QB-Z4-M2";
+    if ((int.parse(day) >= 2 && int.parse(day) <= 7) &&
+        int.parse(month) == 05) {
+      regime = "QA-M2-Z3";
+      return regime;
     }
-    //15
-    if ((int.parse(day) >= 13 || int.parse(day) <= 18) &&
-        int.parse(month) == 12) {
-      regime = "QA-M2";
+    if ((int.parse(day) >= 9 && int.parse(day) <= 10) &&
+        int.parse(month) == 05) {
+      regime = "QB-M2-Z4";
+      return regime;
     }
 
+    print(day + "   " + month);
     return regime;
   }
 
